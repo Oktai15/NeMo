@@ -91,7 +91,7 @@ class NLPModel(ModelPT):
         else:
             logging.info("Did not detect model parallel using LightningModule.configure_ddp")
             return LightningModule.configure_ddp(self, model, device_ids)
-    
+
     def _clip_gradients(self, optimizer, clip_val=None):
         """ Override of PTL Gradient Clipping.
             Enables model parallel gradient clipping from Megatron-LM.
@@ -99,7 +99,7 @@ class NLPModel(ModelPT):
         Args:
             optimizer ([type]): [description]
             clip_val ([type], optional): [description]. Defaults to None.
-        """        
+        """
         app_state = AppState()
 
         # get clip_val from trainer if None is provided
@@ -110,10 +110,11 @@ class NLPModel(ModelPT):
             model = self._trainer.get_model()
             parameters = model.parameters()
             if mpu.model_parallel_is_initialized():
+                logging.info("Using model parallel gradient clipping.")
                 mpu.grads.clip_grad_norm(parameters=parameters, max_norm=clip_val)
             else:
                 raise ValueError('Model parallel groups must be intialized to use model parallel gradient clipping.')
-        
+
         else:
             return Accelerator._clip_gradients(self, optimizer, clip_val)
 
@@ -134,7 +135,7 @@ class NLPModel(ModelPT):
 
                 if app_state.model_parallel_group is None:
                     self.init_model_parallel(app_state.global_rank, app_state.world_size)
-                
+
                 # mpu grad clipping needs parameters to have the attribute model_parallel
                 parameters = self._trainer.get_model().parameters()
                 for p in parameters:
